@@ -4,6 +4,7 @@
 *.pdb
 *.suo
 *.user
+*.github
 *.userosscache
 *.sln.docstates
 *.vshost.*

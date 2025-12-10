@@ -1,0 +1,6 @@
+@LogisticsTracker.Orders_HostAddress = http://localhost:5298
+
+GET {{LogisticsTracker.Orders_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
