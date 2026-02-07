@@ -28,6 +28,7 @@ namespace LogisticsTracker.Orders.Models
         public DateTimeOffset? UpdatedAt { get; set; }
 
         public string? Notes { get; set; }
+        public List<Guid> ReservationIds { get; set; } = [];
 
         public void CalculateTotal()
         {

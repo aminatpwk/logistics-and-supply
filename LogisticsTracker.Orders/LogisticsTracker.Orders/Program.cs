@@ -1,3 +1,4 @@
+using LogisticsTracker.Orders.Clients;
 using LogisticsTracker.Orders.Models;
 using LogisticsTracker.Orders.Models.DTOs;
 using LogisticsTracker.Orders.Repository;
@@ -16,6 +17,13 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddSingleton(TimeProvider.System);
+
+builder.Services.AddHttpClient<IInventoryClient, InventoryHttpClient>(client =>
+{
+    var inventoryUrl = builder.Configuration.GetValue<string>("InventoryServiceUrl") ?? "http://localhost:5142";
+    client.BaseAddress = new Uri(inventoryUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 
 // Register repositories and services
 builder.Services.AddSingleton<IOrderRepository, InMemoryOrderRepository>();
@@ -37,8 +45,7 @@ var ordersApi = app.MapGroup("/api/orders")
     .WithTags("Orders")
     .WithOpenApi();
 
-// POST /api/orders
-ordersApi.MapPost("/", async Task<Results<Created<OrderResponse>, BadRequest<string>>> (CreateOrderRequest request,IOrdersService orderService,CancellationToken ct) =>
+ordersApi.MapPost("/", async Task<Results<Created<OrderResponse>, BadRequest<string>>> (CreateOrderRequest request, IOrdersService orderService, CancellationToken ct) =>
 {
     try
     {
@@ -55,8 +62,7 @@ ordersApi.MapPost("/", async Task<Results<Created<OrderResponse>, BadRequest<str
 .WithSummary("Create a new order")
 .WithDescription("Creates a new order and returns the order details");
 
-// GET /api/orders/{id} 
-ordersApi.MapGet("/{id:guid}", async Task<Results<Ok<OrderResponse>, NotFound>> (Guid id,IOrdersService orderService,CancellationToken ct) =>
+ordersApi.MapGet("/{id:guid}", async Task<Results<Ok<OrderResponse>, NotFound>> (Guid id, IOrdersService orderService, CancellationToken ct) =>
 {
     var order = await orderService.GetOrderAsync(id, ct);
     return order is not null ? TypedResults.Ok(OrderResponse.FromOrder(order)) : TypedResults.NotFound();
@@ -65,8 +71,7 @@ ordersApi.MapGet("/{id:guid}", async Task<Results<Ok<OrderResponse>, NotFound>> 
 .WithSummary("Get order by ID")
 .WithDescription("Retrieves a specific order by its unique identifier");
 
-// GET /api/orders/number/{orderNumber} 
-ordersApi.MapGet("/number/{orderNumber}", async Task<Results<Ok<OrderResponse>, NotFound>> (string orderNumber,IOrdersService orderService,CancellationToken ct) =>
+ordersApi.MapGet("/number/{orderNumber}", async Task<Results<Ok<OrderResponse>, NotFound>> (string orderNumber, IOrdersService orderService, CancellationToken ct) =>
 {
     var order = await orderService.GetOrderAsync(orderNumber, ct);
     return order is not null ? TypedResults.Ok(OrderResponse.FromOrder(order)) : TypedResults.NotFound();
@@ -75,8 +80,7 @@ ordersApi.MapGet("/number/{orderNumber}", async Task<Results<Ok<OrderResponse>, 
 .WithSummary("Get order by order number")
 .WithDescription("Retrieves a specific order by its order number (e.g., ORD-20260130-001234)");
 
-// GET /api/orders 
-ordersApi.MapGet("/", async Task<Ok<PagedResponse<OrderResponse>>> ([AsParameters] OrderQueryParameters queryParams,IOrdersService orderService,CancellationToken ct) =>
+ordersApi.MapGet("/", async Task<Ok<PagedResponse<OrderResponse>>> ([AsParameters] OrderQueryParameters queryParams, IOrdersService orderService, CancellationToken ct) =>
 {
     var pagedOrders = await orderService.GetOrdersAsync(queryParams, ct);
     return TypedResults.Ok(pagedOrders);
@@ -85,8 +89,7 @@ ordersApi.MapGet("/", async Task<Ok<PagedResponse<OrderResponse>>> ([AsParameter
 .WithSummary("Get all orders")
 .WithDescription("Retrieves a paginated list of orders with optional filtering");
 
-// PUT /api/orders/{id}/status 
-ordersApi.MapPut("/{id:guid}/status", async Task<Results<Ok<OrderResponse>, NotFound, BadRequest<string>>> (Guid id,UpdateOrderStatusRequest request,IOrdersService orderService,CancellationToken ct) =>
+ordersApi.MapPut("/{id:guid}/status", async Task<Results<Ok<OrderResponse>, NotFound, BadRequest<string>>> (Guid id, UpdateOrderStatusRequest request, IOrdersService orderService, CancellationToken ct) =>
 {
     try
     {
@@ -106,8 +109,7 @@ ordersApi.MapPut("/{id:guid}/status", async Task<Results<Ok<OrderResponse>, NotF
 .WithSummary("Update order status")
 .WithDescription("Updates the status of an existing order");
 
-// DELETE /api/orders/{id} 
-ordersApi.MapDelete("/{id:guid}", async Task<Results<NoContent, NotFound, BadRequest<string>>> (Guid id,IOrdersService orderService,CancellationToken ct) =>
+ordersApi.MapDelete("/{id:guid}", async Task<Results<NoContent, NotFound, BadRequest<string>>> (Guid id, IOrdersService orderService, CancellationToken ct) =>
 {
     try
     {
@@ -123,10 +125,9 @@ ordersApi.MapDelete("/{id:guid}", async Task<Results<NoContent, NotFound, BadReq
 .WithSummary("Cancel order")
 .WithDescription("Cancels an order (only if not shipped or delivered)");
 
-// Health check endpoint
-app.MapGet("/health", () => new { status = "healthy", timestamp = DateTime.UtcNow })
-    .WithName("HealthCheck")
-    .WithTags("Health");
+//app.MapGet("/health", () => new { status = "healthy", timestamp = DateTime.UtcNow })
+//    .WithName("HealthCheck")
+//    .WithTags("Health");
 
 app.Run();
 
@@ -140,6 +141,7 @@ app.Run();
 [JsonSerializable(typeof(List<OrderResponse>))]
 [JsonSerializable(typeof(Dictionary<Guid, bool>))]
 [JsonSerializable(typeof(OrderQueryParameters))]
+[JsonSerializable(typeof(List<Guid>))]
 internal partial class AppJsonSerializerContext : JsonSerializerContext
 {
 }
