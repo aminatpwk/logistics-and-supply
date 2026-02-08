@@ -16,4 +16,9 @@
     <PackageReference Include="Aspire.Hosting.Redis" Version="9.5.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\LogisticsTracker.Inventory\LogisticsTracker.Inventory\LogisticsTracker.Inventory.csproj" />
+    <ProjectReference Include="..\..\LogisticsTracker.Orders\LogisticsTracker.Orders\LogisticsTracker.Orders.csproj" />
+  </ItemGroup>
+
 </Project>

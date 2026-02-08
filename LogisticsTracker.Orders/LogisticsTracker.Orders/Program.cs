@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
+
 builder.Services.AddControllers();
 //for Native AOT compatibility
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -23,9 +24,17 @@ builder.Services.AddHttpClient<IInventoryClient, InventoryHttpClient>(client =>
     var inventoryUrl = builder.Configuration.GetValue<string>("InventoryServiceUrl") ?? "http://localhost:5142";
     client.BaseAddress = new Uri(inventoryUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
+}).ConfigureHttpClient((serviceProvider, client) =>
+{
+    if (client.BaseAddress == null)
+    {
+        var inventoryUrl = builder.Configuration.GetValue<string>("services:inventory:http:0")
+            ?? builder.Configuration.GetValue<string>("services:inventory:https:0")
+            ?? "http://inventory";
+        client.BaseAddress = new Uri(inventoryUrl);
+    }
 });
 
-// Register repositories and services
 builder.Services.AddSingleton<IOrderRepository, InMemoryOrderRepository>();
 builder.Services.AddScoped<IOrdersService, OrdersService>();
 

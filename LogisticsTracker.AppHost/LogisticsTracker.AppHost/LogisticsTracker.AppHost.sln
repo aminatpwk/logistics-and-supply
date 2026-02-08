@@ -4,6 +4,10 @@ VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LogisticsTracker.AppHost", "LogisticsTracker.AppHost.csproj", "{583FF003-235B-AB10-2AA2-A15B906EFC9D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LogisticsTracker.Orders", "..\..\LogisticsTracker.Orders\LogisticsTracker.Orders\LogisticsTracker.Orders.csproj", "{82B5E0AD-6348-018A-8F6A-221FB06960F8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LogisticsTracker.Inventory", "..\..\LogisticsTracker.Inventory\LogisticsTracker.Inventory\LogisticsTracker.Inventory.csproj", "{05845E04-E50F-F7C7-15AA-B3F71217ED12}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -14,6 +18,14 @@ Global
 		{583FF003-235B-AB10-2AA2-A15B906EFC9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{583FF003-235B-AB10-2AA2-A15B906EFC9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{583FF003-235B-AB10-2AA2-A15B906EFC9D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{82B5E0AD-6348-018A-8F6A-221FB06960F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{82B5E0AD-6348-018A-8F6A-221FB06960F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{82B5E0AD-6348-018A-8F6A-221FB06960F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{82B5E0AD-6348-018A-8F6A-221FB06960F8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{05845E04-E50F-F7C7-15AA-B3F71217ED12}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{05845E04-E50F-F7C7-15AA-B3F71217ED12}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{05845E04-E50F-F7C7-15AA-B3F71217ED12}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{05845E04-E50F-F7C7-15AA-B3F71217ED12}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
