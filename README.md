@@ -83,7 +83,7 @@ POST   /api/inventory/release/{id} - Release reservation
 ---
 Inventory and Orders services orchestrated through Aspire:
 
-<img width="1886" height="875" alt="image" src="https://github.com/user-attachments/assets/f9a077a5-ee07-4a81-8f6d-ff7e03d2a6a6" />
+<img width="928" height="694" alt="image" src="https://github.com/user-attachments/assets/8edc1312-ce56-4b31-99c4-10d5acdeac30" />
 
 ---
 
