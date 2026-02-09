@@ -1,8 +1,10 @@
+using LogisticsTracker.Inventory.DbContext;
 using LogisticsTracker.Inventory.Models;
 using LogisticsTracker.Inventory.Models.DTOs;
 using LogisticsTracker.Inventory.Repository;
 using LogisticsTracker.Inventory.Service;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateSlimBuilder(args);
@@ -16,11 +18,29 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddSingleton(TimeProvider.System);
-builder.Services.AddSingleton<IInventoryRepository, InMemoryInventoryRepository>();
+var connectionString = builder.Configuration.GetConnectionString("InventoryDb") ?? "Host=localhost;Database=logisticsinventory;Username=postgres;Password=postgres";
+builder.Services.AddDbContext<InventoryDbContext>(options =>options.UseNpgsql(connectionString));
+builder.Services.AddScoped<IInventoryRepository, PostgresInventoryRepository>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Logging.AddConsole();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        await dbContext.Database.MigrateAsync();
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while migrating the database");
+    }
+}
+
 
 if (app.Environment.IsDevelopment())
 {

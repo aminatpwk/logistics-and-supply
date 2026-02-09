@@ -1,9 +1,11 @@
 using LogisticsTracker.Orders.Clients;
+using LogisticsTracker.Orders.DbContext;
 using LogisticsTracker.Orders.Models;
 using LogisticsTracker.Orders.Models.DTOs;
 using LogisticsTracker.Orders.Repository;
 using LogisticsTracker.Orders.Service;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,7 +20,8 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddSingleton(TimeProvider.System);
-
+var connectionString = builder.Configuration.GetConnectionString("OrdersDb") ?? "Host=localhost;Database=logisticsorders;Username=postgres;Password=postgres";
+builder.Services.AddDbContext<OrdersDbContext>(options =>options.UseNpgsql(connectionString));
 builder.Services.AddHttpClient<IInventoryClient, InventoryHttpClient>(client =>
 {
     var inventoryUrl = builder.Configuration.GetValue<string>("InventoryServiceUrl") ?? "http://localhost:5142";
@@ -35,12 +38,27 @@ builder.Services.AddHttpClient<IInventoryClient, InventoryHttpClient>(client =>
     }
 });
 
-builder.Services.AddSingleton<IOrderRepository, InMemoryOrderRepository>();
+builder.Services.AddScoped<IOrderRepository, PostgresOrderRepository>();
 builder.Services.AddScoped<IOrdersService, OrdersService>();
 
 builder.Logging.AddConsole();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<OrdersDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        await dbContext.Database.MigrateAsync();
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while migrating the database");
+    }
+}
 
 if (app.Environment.IsDevelopment())
 {
