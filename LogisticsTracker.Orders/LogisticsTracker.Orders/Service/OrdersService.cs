@@ -1,7 +1,10 @@
-﻿using LogisticsTracker.Orders.Clients;
+﻿using Events.Messaging;
+using Events.Orders;
+using LogisticsTracker.Orders.Clients;
 using LogisticsTracker.Orders.Models;
 using LogisticsTracker.Orders.Models.DTOs;
 using LogisticsTracker.Orders.Repository;
+using System;
 using System.Runtime.CompilerServices;
 
 namespace LogisticsTracker.Orders.Service
@@ -14,13 +17,15 @@ namespace LogisticsTracker.Orders.Service
         private readonly Lock _orderNumberLock = new();
         private int _orderNumberSequence = 1000; //for testing purposes only
         private readonly IInventoryClient _inventoryClient;
+        private readonly IEventPublisher _eventPublisher;
 
-        public OrdersService(IOrderRepository repository, IInventoryClient inventoryClient, TimeProvider timeProvider, ILogger<OrdersService> logger)
+        public OrdersService(IOrderRepository repository, IInventoryClient inventoryClient, TimeProvider timeProvider, ILogger<OrdersService> logger, IEventPublisher eventPublisher)
         {
             _repository = repository;
             _inventoryClient = inventoryClient;
             _timeProvider = timeProvider;
             _logger = logger;
+            _eventPublisher = eventPublisher;
         }
 
         public async Task<Order> CreateOrderAsync(CreateOrderRequest request, CancellationToken cancellationToken = default)
@@ -76,6 +81,25 @@ namespace LogisticsTracker.Orders.Service
             order.ReservationIds = reservations.Select(r => r.ReservationId).ToList();
             var createdOrder = await _repository.CreateAsync(order, cancellationToken);
 
+            var orderCreatedEvent = new OrderCreatedEvent
+            {
+                OrderId = order.Id,
+                OrderNumber = order.OrderNumber,
+                CustomerId = order.CustomerId,
+                CustomerName = order.CustomerName,
+                CustomerEmail = order.CustomerEmail,
+                Items = order.Items.Select(i => new OrderItemData(
+                    i.ProductId,
+                    i.ProductName,
+                    i.StockKeepingUnit,
+                    i.Quantity,
+                    i.UnitPrice
+                )).ToList(),
+                TotalAmount = order.TotalAmount,
+                ReservationIds = order.ReservationIds
+            };
+
+            await _eventPublisher.PublishAsync(orderCreatedEvent, cancellationToken);
             return createdOrder;
         }
 
@@ -121,6 +145,29 @@ namespace LogisticsTracker.Orders.Service
             order.UpdatedAt = _timeProvider.GetUtcNow();
             var updatedOrder = await _repository.UpdateAsync(order, cancellationToken);
 
+            var statusChangedEvent = new OrderStatusChangedEvent
+            {
+                OrderId = order.Id,
+                OrderNumber = order.OrderNumber,
+                PreviousStatus = oldStatus.ToString(),
+                NewStatus = request.NewStatus.ToString(),
+                Reason = request.Reason
+            };
+
+            await _eventPublisher.PublishAsync(statusChangedEvent, cancellationToken);
+
+            if (request.NewStatus == OrderStatus.Confirmed)
+            {
+                var confirmedEvent = new OrderConfirmedEvent
+                {
+                    OrderId = order.Id,
+                    OrderNumber = order.OrderNumber,
+                    CustomerId = order.CustomerId,
+                    ConfirmedAt = _timeProvider.GetUtcNow()
+                };
+                await _eventPublisher.PublishAsync(confirmedEvent, cancellationToken);
+            }
+
             return updatedOrder;
         }
 
@@ -145,6 +192,16 @@ namespace LogisticsTracker.Orders.Service
             order.UpdatedAt = _timeProvider.GetUtcNow();
 
             await _repository.UpdateAsync(order, cancellationToken);
+
+            var cancelledEvent = new OrderCancelledEvent
+            {
+                OrderId = order.Id,
+                OrderNumber = order.OrderNumber,
+                ReservationIds = order.ReservationIds,
+                CancellationReason = "User requested cancellation"
+            };
+
+            await _eventPublisher.PublishAsync(cancelledEvent, cancellationToken);
 
             return true;
         }

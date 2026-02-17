@@ -1,5 +1,8 @@
+using Events.Inventory;
+using Events.Extensions;
 using LogisticsTracker.Orders.Clients;
 using LogisticsTracker.Orders.DbContext;
+using LogisticsTracker.Orders.EventHandlers;
 using LogisticsTracker.Orders.Models;
 using LogisticsTracker.Orders.Models.DTOs;
 using LogisticsTracker.Orders.Repository;
@@ -40,6 +43,18 @@ builder.Services.AddHttpClient<IInventoryClient, InventoryHttpClient>(client =>
 
 builder.Services.AddScoped<IOrderRepository, PostgresOrderRepository>();
 builder.Services.AddScoped<IOrdersService, OrdersService>();
+
+builder.Services.AddKafkaEventPublisher(builder.Configuration);
+builder.Services.AddKafkaEventConsumer<InventoryReleasedConsumer, InventoryReleasedEvent>(
+    builder.Configuration,
+    groupId: "orders-service",
+    topics: "logistics.inventory.released");
+builder.Services.AddKafkaEventConsumer<LowStockAlertConsumer, LowStockAlertEvent>(
+    builder.Configuration,
+    groupId: "orders-service",
+    topics: "logistics.low.stock.alert");
+builder.Services.AddEventHandler<InventoryReleasedHandler, InventoryReleasedEvent>();
+builder.Services.AddEventHandler<LowStockAlertHandler, LowStockAlertEvent>();
 
 builder.Logging.AddConsole();
 
