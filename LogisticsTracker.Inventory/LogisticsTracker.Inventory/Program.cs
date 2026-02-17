@@ -1,4 +1,8 @@
+using Events.Extensions;
+using Events.Inventory;
+using Events.Orders;
 using LogisticsTracker.Inventory.DbContext;
+using LogisticsTracker.Inventory.EventHandler;
 using LogisticsTracker.Inventory.Models;
 using LogisticsTracker.Inventory.Models.DTOs;
 using LogisticsTracker.Inventory.Repository;
@@ -22,6 +26,21 @@ var connectionString = builder.Configuration.GetConnectionString("InventoryDb") 
 builder.Services.AddDbContext<InventoryDbContext>(options =>options.UseNpgsql(connectionString));
 builder.Services.AddScoped<IInventoryRepository, PostgresInventoryRepository>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
+
+builder.Services.AddKafkaEventPublisher(builder.Configuration);
+builder.Services.AddKafkaEventConsumer<OrderCancelledConsumer, OrderCancelledEvent>(
+    builder.Configuration,
+    groupId: "inventory-service",
+    topics: "logistics.order.cancelled");
+
+builder.Services.AddKafkaEventConsumer<OrderCreatedConsumer, OrderCreatedEvent>(
+    builder.Configuration,
+    groupId: "inventory-service",
+    topics: "logistics.order.created");
+builder.Services.AddEventHandler<OrderCancelledHandler, OrderCancelledEvent>();
+builder.Services.AddEventHandler<OrderCreatedHandler, OrderCreatedEvent>();
+
+
 builder.Logging.AddConsole();
 
 var app = builder.Build();

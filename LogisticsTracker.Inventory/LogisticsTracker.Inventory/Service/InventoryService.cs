@@ -1,4 +1,6 @@
-﻿using LogisticsTracker.Inventory.Models;
+﻿using Events.Inventory;
+using Events.Messaging;
+using LogisticsTracker.Inventory.Models;
 using LogisticsTracker.Inventory.Models.DTOs;
 using LogisticsTracker.Inventory.Repository;
 using LogisticsTracker.Inventory.Validators;
@@ -11,13 +13,15 @@ namespace LogisticsTracker.Inventory.Service
         private readonly IInventoryRepository _repository;
         private readonly TimeProvider _timeProvider;
         private readonly ILogger<InventoryService> _logger;
+        private readonly IEventPublisher _eventPublisher;
         private readonly Lock _stockLock = new();
 
-        public InventoryService(IInventoryRepository repository, TimeProvider timeProvider, ILogger<InventoryService> logger)
+        public InventoryService(IInventoryRepository repository, TimeProvider timeProvider, ILogger<InventoryService> logger, IEventPublisher eventPublisher)
         {
             _repository = repository;
             _timeProvider = timeProvider;
             _logger = logger;
+            _eventPublisher = eventPublisher;
         }
 
         public async Task<Dictionary<Guid, StockCheckResponse>> CheckStockAvailabilityAsync(IEnumerable<(Guid ProductId, int Quantity)> items)
@@ -83,6 +87,19 @@ namespace LogisticsTracker.Inventory.Service
             };
 
             var created = await _repository.CreateAsync(item, cancellationToken);
+
+            var createdEvent = new InventoryItemCreatedEvent
+            {
+                ProductId = item.ProductId,
+                StockKeepingUnit = item.StockKeepingUnit,
+                ProductName = item.Name,
+                InitialQuantity = item.QuantityAvailable,
+                UnitPrice = item.UnitPrice,
+                WarehouseLocation = item.WarehouseLocation
+            };
+
+            await _eventPublisher.PublishAsync(createdEvent, cancellationToken);
+
             return created;
         }
 
@@ -151,6 +168,18 @@ namespace LogisticsTracker.Inventory.Service
 
                 var updatedReservation = reservation with { ReleasedAt = _timeProvider.GetUtcNow() };
                 _repository.UpdateReservationAsync(updatedReservation, cancellationToken).Wait();
+
+                var releasedEvent = new InventoryReleasedEvent
+                {
+                    ReservationId = reservationId,
+                    ProductId = reservation.ProductId,
+                    StockKeepingUnit = reservation.StockKeepingUnit,
+                    OrderId = reservation.OrderId,
+                    Quantity = reservation.Quantity,
+                    NewAvailableQuantity = item.QuantityAvailable
+                };
+
+                _eventPublisher.PublishAsync(releasedEvent, cancellationToken).Wait();
                 return true;
             }
         }
@@ -187,6 +216,19 @@ namespace LogisticsTracker.Inventory.Service
                 );
 
                 var created = _repository.CreateReservationAsync(reservation, cancellationToken).Result;
+
+                var reservedEvent = new InventoryReservedEvent
+                {
+                    ReservationId = reservation.Id,
+                    ProductId = request.ProductId,
+                    StockKeepingUnit = item.StockKeepingUnit,
+                    OrderId = request.OrderId,
+                    Quantity = request.Quantity,
+                    RemainingQuantity = item.QuantityAvailable
+                };
+
+                _eventPublisher.PublishAsync(reservedEvent, cancellationToken).Wait();
+
                 return created;
             }
         }
@@ -229,8 +271,36 @@ namespace LogisticsTracker.Inventory.Service
 
                 var updated = _repository.UpdateAsync(item, cancellationToken).Result;
 
+                var stockChangedEvent = new StockLevelChangedEvent
+                {
+                    ProductId = item.ProductId,
+                    StockKeepingUnit = item.StockKeepingUnit,
+                    PreviousQuantity = previousQuantity,
+                    NewQuantity = item.QuantityAvailable,
+                    QuantityChanged = item.QuantityAvailable,
+                    MovementType = request.MovementType.ToString(),
+                    Reason = request.Reason
+                };
+
+                _eventPublisher.PublishAsync(stockChangedEvent, cancellationToken).Wait();
+
                 if (item.IsLowStock)
                 {
+                    var severity = CalculateAlertSeverity(item);
+
+                    var lowStockEvent = new LowStockAlertEvent
+                    {
+                        ProductId = item.ProductId,
+                        StockKeepingUnit = item.StockKeepingUnit,
+                        ProductName = item.Name,
+                        CurrentQuantity = item.TotalQuantity,
+                        ReorderPoint = item.ReorderPoint,
+                        ReorderQuantity = item.ReorderQuantity,
+                        QuantityToOrder = Math.Max(0, item.ReorderPoint + item.ReorderQuantity - item.TotalQuantity),
+                        Severity = severity
+                    };
+
+                    _eventPublisher.PublishAsync(lowStockEvent, cancellationToken).Wait();
                     _logger.LogWarning("Low stock alert for {stockKeepingUnit}: {Quantity} units (reorder point: {ReorderPoint})",
                         item.StockKeepingUnit, item.TotalQuantity, item.ReorderPoint);
                 }
@@ -238,5 +308,20 @@ namespace LogisticsTracker.Inventory.Service
                 return updated;
             }
         }
+
+        #region private methods
+        private static AlertSeverity CalculateAlertSeverity(InventoryItem item)
+        {
+            var percentageOfReorder = (double)item.TotalQuantity / item.ReorderPoint * 100;
+
+            return percentageOfReorder switch
+            {
+                0 => AlertSeverity.Critical,
+                <= 25 => AlertSeverity.High,
+                <= 50 => AlertSeverity.Medium,
+                _ => AlertSeverity.Low
+            };
+        }
+        #endregion
     }
 }
