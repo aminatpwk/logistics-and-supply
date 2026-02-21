@@ -21,6 +21,8 @@ LogisticsTracker is a **microservices-based logistics management system** design
 - **Domain-Driven Design** 
 - **Modern C# Features** - C# 14 preview features
 - **.NET 10 Capabilities** - Native AOT, TimeProvider, improved APIs
+- **Saga Pattern** - Orchestration-based saga for managing distributed transactions
+- **Event-Driven Architecture** -  Asynchronous communication using Apache Kafka
 
 ---
 
@@ -91,6 +93,15 @@ Inventory and Orders services orchestrated through Aspire:
 
 This project is created for educational purposes to demonstrate modern .NET and C# features.
 
+
+---
+
+---
+
+## Acknowledgments
+
+- Implements patterns from [Microservices.io](https://microservices.io/)
+- Event-driven architecture patterns from [Martin Fowler](https://martinfowler.com/)
 
 ---
 
