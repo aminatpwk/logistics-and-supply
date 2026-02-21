@@ -12,7 +12,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\LogisticsTracker.Inventory\LogisticsTracker.Inventory\LogisticsTracker.Inventory.csproj" />
+    <ProjectReference Include="..\..\LogisticsTracker.Orders\LogisticsTracker.Orders\LogisticsTracker.Orders.csproj" />
     <ProjectReference Include="..\Events\Events.csproj" />
+    <ProjectReference Include="..\LogisticsTracker.AppHost\LogisticsTracker.AppHost.csproj" />
   </ItemGroup>
 
 </Project>
