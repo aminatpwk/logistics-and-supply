@@ -55,6 +55,8 @@ builder.Services.AddKafkaEventConsumer<LowStockAlertConsumer, LowStockAlertEvent
     topics: "logistics.low.stock.alert");
 builder.Services.AddEventHandler<InventoryReleasedHandler, InventoryReleasedEvent>();
 builder.Services.AddEventHandler<LowStockAlertHandler, LowStockAlertEvent>();
+//builder.Services.AddSagas();
+
 
 builder.Logging.AddConsole();
 
