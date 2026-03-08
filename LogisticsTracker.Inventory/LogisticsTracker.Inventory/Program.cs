@@ -1,6 +1,7 @@
 using Events.Extensions;
 using Events.Inventory;
 using Events.Orders;
+using LogisticsTracker.Inventory.Cache;
 using LogisticsTracker.Inventory.DbContext;
 using LogisticsTracker.Inventory.EventHandler;
 using LogisticsTracker.Inventory.Models;
@@ -27,6 +28,9 @@ builder.Services.AddDbContext<InventoryDbContext>(options =>options.UseNpgsql(co
 builder.Services.AddScoped<IInventoryRepository, PostgresInventoryRepository>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 
+var redisConnection = builder.Configuration.GetConnectionString("RedisConnection") ?? "localhost:6379";
+
+builder.Services.AddSingleton<InventoryCacheService>();
 builder.Services.AddKafkaEventPublisher(builder.Configuration);
 builder.Services.AddKafkaEventConsumer<OrderCancelledConsumer, OrderCancelledEvent>(
     builder.Configuration,

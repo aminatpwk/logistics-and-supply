@@ -2,6 +2,7 @@
 using Saga.Extensions.Concrete;
 using Saga.Extensions.Contracts;
 using Saga.Orders;
+using Saga.Orders.Payment;
 
 namespace Saga.Extensions
 {
@@ -11,6 +12,7 @@ namespace Saga.Extensions
         {
             services.AddScoped<ISagaCoordinator, SagaCoordinator>();
             services.AddScoped<OrderCreationSaga>();
+            services.AddScoped<IPaymentClient, MockPaymentClient>();
 
             return services;
         }
