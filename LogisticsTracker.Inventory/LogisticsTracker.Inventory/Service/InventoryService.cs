@@ -14,7 +14,7 @@ namespace LogisticsTracker.Inventory.Service
         private readonly TimeProvider _timeProvider;
         private readonly ILogger<InventoryService> _logger;
         private readonly IEventPublisher _eventPublisher;
-        private readonly Lock _stockLock = new();
+        private readonly SemaphoreSlim _stockSemaphore = new(1, 1);
 
         public InventoryService(IInventoryRepository repository, TimeProvider timeProvider, ILogger<InventoryService> logger, IEventPublisher eventPublisher)
         {
@@ -139,7 +139,8 @@ namespace LogisticsTracker.Inventory.Service
 
         public async Task<bool> ReleaseReservationAsync(Guid reservationId, CancellationToken cancellationToken = default)
         {
-            lock (_stockLock)
+            await _stockSemaphore.WaitAsync(cancellationToken);
+            try
             {
                 var reservation = _repository.GetReservationAsync(reservationId, cancellationToken).Result;
                 if (reservation == null)
@@ -182,11 +183,16 @@ namespace LogisticsTracker.Inventory.Service
                 _eventPublisher.PublishAsync(releasedEvent, cancellationToken).Wait();
                 return true;
             }
+            finally
+            {
+                _stockSemaphore.Release();
+            }
         }
 
         public async Task<InventoryReservation> ReserveInventoryAsync(ReserveInventoryRequest request, CancellationToken cancellationToken = default)
         {
-            lock (_stockLock)
+            await _stockSemaphore.WaitAsync(cancellationToken);
+            try
             {
                 var item = _repository.GetByProductIdAsync(request.ProductId, cancellationToken).Result;
                 if (item == null)
@@ -231,11 +237,15 @@ namespace LogisticsTracker.Inventory.Service
 
                 return created;
             }
+            finally
+            {
+                _stockSemaphore.Release();
+            }
         }
 
         public async Task<InventoryItem> UpdateStockAsync(Guid productId, UpdateStockRequest request, CancellationToken cancellationToken = default)
         {
-            lock (_stockLock)
+            try
             {
                 var item = _repository.GetByProductIdAsync(productId, cancellationToken).Result;
                 if (item == null)
@@ -306,6 +316,10 @@ namespace LogisticsTracker.Inventory.Service
                 }
 
                 return updated;
+            }
+            finally
+            {
+                _stockSemaphore.Release();
             }
         }
 

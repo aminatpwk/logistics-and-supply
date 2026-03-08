@@ -18,36 +18,24 @@ namespace LogisticsTracker.Inventory.Validators
         private static readonly SearchValues<char> _validDigits = SearchValues.Create("0123456789");
 
         private static readonly SearchValues<char> _validAlphanumeric = SearchValues.Create("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
+        private static bool AllCharsValid(ReadOnlySpan<char> span, SearchValues<char> allowed) => !span.ContainsAnyExcept(allowed);
 
         public static bool IsValidSku(ReadOnlySpan<char> stockKeepingUnit)
         {
             if (stockKeepingUnit.Length != 11)
-            {
                 return false;
-            }
 
             if (stockKeepingUnit[3] != '-' || stockKeepingUnit[7] != '-')
-            {
                 return false;
-            }
 
-            var part1 = stockKeepingUnit[0..3];
-            if (!part1.ContainsAny(_validLetters))
-            {
+            if (!AllCharsValid(stockKeepingUnit[0..3], _validLetters))
                 return false;
-            }
 
-            var part2 = stockKeepingUnit[4..7];
-            if (!part2.ContainsAny(_validDigits))
-            {
+            if (!AllCharsValid(stockKeepingUnit[4..7], _validDigits))
                 return false;
-            }
 
-            var part3 = stockKeepingUnit[8..11];
-            if (!part3.ContainsAny(_validAlphanumeric))
-            {
+            if (!AllCharsValid(stockKeepingUnit[8..11], _validAlphanumeric))
                 return false;
-            }
 
             return true;
         }
@@ -55,36 +43,36 @@ namespace LogisticsTracker.Inventory.Validators
         public static (bool IsValid, string? ErrorMessage) ValidateSkuDetailed(ReadOnlySpan<char> stockKeepingUnit)
         {
             if (stockKeepingUnit.Length != 11)
-                return (false, $"Stock keeping unit must be exactly 11 characters (format: XXX-NNN-XXX), got {stockKeepingUnit.Length}");
+            {
+                return (false,
+                    $"SKU must be exactly 11 characters (format: XXX-NNN-XXX), got {stockKeepingUnit.Length}");
+            }
 
             if (stockKeepingUnit[3] != '-' || stockKeepingUnit[7] != '-')
-                return (false, "Stock keeping unit must have hyphens at positions 3 and 7 (format: XXX-NNN-XXX)");
-
-            var part1 = stockKeepingUnit[0..3];
-            if (!part1.ContainsAny(_validLetters))
             {
-                return (false, "First 3 characters must be uppercase letters (A-Z)");
+                return (false,
+                    "SKU must have hyphens at positions 3 and 7 (format: XXX-NNN-XXX)");
             }
 
-            var part2 = stockKeepingUnit[4..7];
-            if (!part2.ContainsAny(_validDigits))
+            if (!AllCharsValid(stockKeepingUnit[0..3], _validLetters))
             {
-                return (false, "Characters 4-6 must be digits (0-9)");
+                return (false, "First 3 characters must all be uppercase letters (A-Z)");
             }
 
-            var part3 = stockKeepingUnit[8..11];
-            if (!part3.ContainsAny(_validAlphanumeric))
+            if (!AllCharsValid(stockKeepingUnit[4..7], _validDigits))
             {
-                return (false, "Last 3 characters must be uppercase letters or digits");
+                return (false, "Characters 5-7 must all be digits (0-9)");
+            }
+
+            if (!AllCharsValid(stockKeepingUnit[8..11], _validAlphanumeric))
+            {
+                return (false, "Last 3 characters must all be uppercase letters or digits");
             }
 
             return (true, null);
         }
 
-        public static string NormalizeSku(string sku)
-        {
-            return sku.Trim().ToUpperInvariant();
-        }
+        public static string NormalizeSku(string sku) => sku.Trim().ToUpperInvariant();
 
         public static string GenerateRandomSku()
         {
