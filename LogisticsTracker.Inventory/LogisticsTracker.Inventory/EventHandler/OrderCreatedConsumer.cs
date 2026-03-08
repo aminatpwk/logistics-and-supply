@@ -6,7 +6,7 @@ using System.ComponentModel;
 
 namespace LogisticsTracker.Inventory.EventHandler
 {
-    public class OrderCreatedConsumer : KafkaEventConsumer<OrderCreatedEvent>, IHostedService, IComponent, IDisposable
+    public class OrderCreatedConsumer : KafkaEventConsumer<OrderCreatedEvent>
     {
         public OrderCreatedConsumer(
             ConsumerConfig config,
@@ -15,17 +15,6 @@ namespace LogisticsTracker.Inventory.EventHandler
             params string[] topics)
             : base(config, serviceProvider, logger, topics)
         {
-        }
-
-        public Task StartAsync(CancellationToken cancellationToken)
-        {
-            return ExecuteAsync(cancellationToken);
-        }
-
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
-            Dispose();
-            return Task.CompletedTask;
         }
     }
 }

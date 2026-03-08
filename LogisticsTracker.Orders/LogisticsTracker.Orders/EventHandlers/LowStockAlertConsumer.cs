@@ -5,7 +5,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace LogisticsTracker.Orders.EventHandlers
 {
-    public class LowStockAlertConsumer : KafkaEventConsumer<LowStockAlertEvent>, IHostedService, IDisposable
+    public class LowStockAlertConsumer : KafkaEventConsumer<LowStockAlertEvent>
     {
         public LowStockAlertConsumer(
         ConsumerConfig config,
@@ -14,16 +14,6 @@ namespace LogisticsTracker.Orders.EventHandlers
         params string[] topics) : base(config, serviceProvider, logger, topics)
         {
 
-        }
-        public Task StartAsync(CancellationToken cancellationToken)
-        {
-            return ExecuteAsync(cancellationToken);
-        }
-
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
-            Dispose();
-            return Task.CompletedTask;
         }
     }
 }

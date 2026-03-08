@@ -1,13 +1,13 @@
 ﻿using Confluent.Kafka;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Events.Messaging
 {
-    public abstract class KafkaEventConsumer<TEvent> : BackgroundWorker where TEvent : IDomainEvent
+    public abstract class KafkaEventConsumer<TEvent> : BackgroundService where TEvent : IDomainEvent
     {
         private readonly IConsumer<string, string> _consumer;
         private readonly ILogger _logger;
@@ -41,8 +41,9 @@ namespace Events.Messaging
             };
         }
 
-        protected async Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            await Task.Yield();
             _consumer.Subscribe(_topics);
             try
             {
@@ -50,7 +51,9 @@ namespace Events.Messaging
                 {
                     try
                     {
-                        var consumeResult = _consumer.Consume(stoppingToken);
+                        var consumeResult = await Task.Run(
+                            () => _consumer.Consume(stoppingToken),
+                            stoppingToken);
 
                         if (consumeResult?.Message == null)
                         {
